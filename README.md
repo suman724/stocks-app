@@ -29,15 +29,25 @@ The project is architected with a strict separation of concerns to ensure securi
     cd stocks-app
     ```
 
-2.  **Install Frontend Dependencies:**
+2.  **Install dependencies and setup:**
     ```bash
-    npm install
+    make setup
     ```
 
 3.  **Run in Development Mode:**
     ```bash
-    npm run tauri dev
+    make dev
     ```
+
+## Makefile Commands
+
+A `Makefile` is provided for common development tasks:
+
+*   `make dev`: Run the Tauri app in development mode
+*   `make build`: Build the production binaries
+*   `make test`: Run all frontend and backend tests
+*   `make lint`: Run ESLint and cargo clippy
+*   `make format`: Run Prettier and cargo fmt
 
 ## Project Structure
 

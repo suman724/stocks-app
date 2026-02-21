@@ -52,7 +52,14 @@ src-tauri/src/                # Rust Native Backend
   http/                       # Shared HTTP client logic
 ```
 
-## 5. Testing Requirements
+## 5. Testing and Commands
+A `Makefile` is centrally located in the root directory. AI assistants should prefer these unified scripts:
+- `make setup`: Initial installation
+- `make dev`: Starts the Tauri + React dev application securely with PATH configured
+- `make test`: Run all frontend and backend tests
+- `make lint`: Run ESLint and cargo clippy
+- `make format`: Run Prettier and cargo fmt
+
 Production-readiness is a primary goal. New features should include:
 - **Rust Unit Tests**: For provider parsing, error mapping, validation, and cache TTL logic.
 - **TypeScript Unit Tests**: For local UI reducers, range selections, and chart data formatting.

@@ -1,12 +1,14 @@
 .PHONY: dev build test lint format clean install setup
 
+NPM_CACHE ?= /tmp/npm-cache-stocks
+
 # Setup project
 setup: install
 	@echo "Setup complete. You can now run 'make dev'."
 
 # Install frontend dependencies
 install:
-	npm install
+	npm install --cache $(NPM_CACHE)
 
 # Run the app in development mode
 dev:
@@ -47,3 +49,4 @@ format-backend:
 clean:
 	rm -rf node_modules
 	rm -rf src-tauri/target
+

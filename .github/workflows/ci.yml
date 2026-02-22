@@ -66,6 +66,24 @@ jobs:
         run: cargo test --locked
         working-directory: ./src-tauri
 
+  e2e-secret-check:
+    runs-on: ubuntu-latest
+    outputs:
+      has_e2e_api_key: ${{ steps.check.outputs.has_e2e_api_key }}
+    steps:
+      - name: Check E2E API key secret presence
+        id: check
+        env:
+          E2E_TWELVEDATA_API_KEY: ${{ secrets.E2E_TWELVEDATA_API_KEY }}
+        run: |
+          if [ -n "$E2E_TWELVEDATA_API_KEY" ]; then
+            echo "has_e2e_api_key=true" >> "$GITHUB_OUTPUT"
+            echo "E2E_TWELVEDATA_API_KEY is configured."
+          else
+            echo "has_e2e_api_key=false" >> "$GITHUB_OUTPUT"
+            echo "E2E_TWELVEDATA_API_KEY is not configured."
+          fi
+
   desktop-build-artifacts:
     needs: [frontend-checks, backend-checks]
     strategy:
@@ -106,8 +124,8 @@ jobs:
             src-tauri/target/release/bundle/**/*.msi
 
   desktop-e2e-smoke-linux:
-    if: ${{ secrets.E2E_TWELVEDATA_API_KEY != '' }}
-    needs: [frontend-checks, backend-checks]
+    if: ${{ needs.e2e-secret-check.outputs.has_e2e_api_key == 'true' }}
+    needs: [frontend-checks, backend-checks, e2e-secret-check]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -175,8 +193,8 @@ jobs:
         run: xvfb-run -a make e2e-smoke
 
   desktop-e2e-smoke-linux-skip-notice:
-    if: ${{ secrets.E2E_TWELVEDATA_API_KEY == '' }}
-    needs: [frontend-checks, backend-checks]
+    if: ${{ needs.e2e-secret-check.outputs.has_e2e_api_key != 'true' }}
+    needs: [frontend-checks, backend-checks, e2e-secret-check]
     runs-on: ubuntu-latest
     steps:
       - name: Explain E2E skip

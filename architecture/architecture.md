@@ -334,11 +334,11 @@ sequenceDiagram
 ### UI Models (TypeScript)
 
 ```ts
-export type TimeRange = "1D" | "1W" | "1M" | "3M" | "1Y";
+export type TimeRange = '1D' | '1W' | '1M' | '3M' | '1Y';
 
-export type QuoteStatus = "fresh" | "stale" | "error";
+export type QuoteStatus = 'fresh' | 'stale' | 'error';
 
-export type AppProvider = "twelvedata";
+export type AppProvider = 'twelvedata';
 
 export interface WatchlistItem {
   symbol: string;
@@ -847,4 +847,3 @@ The app is considered production-ready for an internal or personal desktop relea
 3. Should provider calls run only in Rust, or permit direct frontend fetch in dev mode?
 4. Is OS keychain support required for v1, or acceptable in v2?
 5. Do we want unsigned internal builds first, then signed distribution in a later step?
-

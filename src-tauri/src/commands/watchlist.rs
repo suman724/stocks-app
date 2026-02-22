@@ -1,4 +1,4 @@
-use crate::domain::{normalize_symbol, AppError, WatchlistItem};
+use crate::domain::{AppError, WatchlistItem, normalize_symbol};
 use crate::persistence::WatchlistStore;
 use tauri::AppHandle;
 
@@ -13,7 +13,10 @@ pub fn add_symbol(app: AppHandle, symbol: String) -> Result<Vec<WatchlistItem>, 
     let store = WatchlistStore::from_app(&app)?;
     let mut watchlist = store.load()?;
 
-    if watchlist.iter().any(|item| item.symbol == normalized_symbol) {
+    if watchlist
+        .iter()
+        .any(|item| item.symbol == normalized_symbol)
+    {
         return Err(AppError::validation(
             "symbol_exists",
             format!("{normalized_symbol} is already in your watchlist."),

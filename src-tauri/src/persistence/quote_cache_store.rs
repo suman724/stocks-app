@@ -1,4 +1,4 @@
-use crate::domain::{unix_timestamp_secs, AppError, QuoteStatus, QuoteSummary};
+use crate::domain::{AppError, QuoteStatus, QuoteSummary, unix_timestamp_secs};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -166,4 +166,3 @@ mod tests {
         assert!(!is_cache_fresh(100, 161));
     }
 }
-

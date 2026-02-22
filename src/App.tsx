@@ -1,10 +1,13 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { useState } from 'react';
 import { WatchlistScreen } from './features/watchlist/WatchlistScreen';
 import { ChartPanel } from './features/chart/ChartPanel';
 import { SettingsScreen } from './features/settings/SettingsScreen';
 import './App.css';
 
 function App() {
+  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
+
   return (
     <Router>
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -41,10 +44,13 @@ function App() {
               element={
                 <>
                   <div style={{ flex: 1, overflowY: 'auto' }}>
-                    <WatchlistScreen />
+                    <WatchlistScreen
+                      selectedSymbol={selectedSymbol}
+                      onSelectSymbol={(symbol) => setSelectedSymbol(symbol)}
+                    />
                   </div>
                   <div style={{ flex: 2, overflowY: 'auto' }}>
-                    <ChartPanel />
+                    <ChartPanel selectedSymbol={selectedSymbol} />
                   </div>
                 </>
               }

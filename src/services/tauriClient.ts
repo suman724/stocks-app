@@ -4,6 +4,8 @@ import type {
   AppSettings,
   ProviderTestResult,
   QuoteSummary,
+  SymbolPerformance,
+  TimeRange,
   WatchlistItem,
 } from '../types';
 
@@ -74,5 +76,25 @@ export const tauriClient = {
 
   refreshWatchlistQuotes: async (): Promise<QuoteSummary[]> => {
     return await invokeWithError<QuoteSummary[]>('refresh_watchlist_quotes');
+  },
+
+  getSymbolPerformance: async (
+    symbol: string,
+    range: TimeRange,
+  ): Promise<SymbolPerformance> => {
+    return await invokeWithError<SymbolPerformance>('get_symbol_performance', {
+      symbol,
+      range,
+    });
+  },
+
+  refreshSymbolPerformance: async (
+    symbol: string,
+    range: TimeRange,
+  ): Promise<SymbolPerformance> => {
+    return await invokeWithError<SymbolPerformance>('refresh_symbol_performance', {
+      symbol,
+      range,
+    });
   },
 };

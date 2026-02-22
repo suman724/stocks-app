@@ -10,7 +10,15 @@ const DEFAULT_SETTINGS: AppSettings = {
   notificationsEnabled: false,
 };
 
-export const WatchlistScreen: React.FC = () => {
+interface WatchlistScreenProps {
+  selectedSymbol?: string | null;
+  onSelectSymbol?: (symbol: string) => void;
+}
+
+export const WatchlistScreen: React.FC<WatchlistScreenProps> = ({
+  selectedSymbol,
+  onSelectSymbol,
+}) => {
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [quotes, setQuotes] = useState<QuoteSummary[]>([]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
@@ -108,6 +116,8 @@ export const WatchlistScreen: React.FC = () => {
       const updated = await tauriClient.addSymbol(newSymbol);
       setWatchlist(updated);
       setNewSymbol('');
+      const addedSymbol = newSymbol.trim().toUpperCase();
+      onSelectSymbol?.(addedSymbol);
 
       if (settings.apiKey.trim()) {
         await refreshQuotes();
@@ -124,6 +134,9 @@ export const WatchlistScreen: React.FC = () => {
       const updated = await tauriClient.removeSymbol(symbol);
       setWatchlist(updated);
       setQuotes((current) => current.filter((quote) => quote.symbol !== symbol));
+      if (selectedSymbol === symbol && updated.length > 0) {
+        onSelectSymbol?.(updated[0].symbol);
+      }
     } catch (rawError) {
       const error = rawError as AppError;
       setFeedback(error.message);
@@ -188,10 +201,16 @@ export const WatchlistScreen: React.FC = () => {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <strong>{item.symbol}</strong>
-                  <button type="button" onClick={() => handleRemoveSymbol(item.symbol)}>
-                    Remove
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" onClick={() => onSelectSymbol?.(item.symbol)}>
+                      View Chart
+                    </button>
+                    <button type="button" onClick={() => handleRemoveSymbol(item.symbol)}>
+                      Remove
+                    </button>
+                  </div>
                 </div>
+                {selectedSymbol === item.symbol && <div style={{ color: '#0d47a1' }}>Selected</div>}
                 <div>Price: {quote ? formatPrice(quote.price) : '—'}</div>
                 <div>
                   Change: {quote?.changeAbs !== undefined ? quote.changeAbs.toFixed(2) : '—'} (

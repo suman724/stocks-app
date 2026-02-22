@@ -1,4 +1,4 @@
-use crate::domain::{validate_settings, AppError, AppSettings, AppSettingsInput};
+use crate::domain::{AppError, AppSettings, AppSettingsInput, validate_settings};
 use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
@@ -138,4 +138,3 @@ mod tests {
         assert!(result.is_err());
     }
 }
-

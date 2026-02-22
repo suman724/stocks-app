@@ -30,4 +30,3 @@ pub async fn test_provider_connection(app: AppHandle) -> Result<ProviderTestResu
     let provider = TwelveDataAdapter::new(client);
     provider.test_connection(&settings.api_key).await
 }
-

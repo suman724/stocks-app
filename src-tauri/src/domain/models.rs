@@ -22,6 +22,18 @@ pub enum TimeRange {
     OneYear,
 }
 
+impl TimeRange {
+    pub fn as_key(&self) -> &'static str {
+        match self {
+            TimeRange::OneDay => "1D",
+            TimeRange::OneWeek => "1W",
+            TimeRange::OneMonth => "1M",
+            TimeRange::ThreeMonths => "3M",
+            TimeRange::OneYear => "1Y",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct WatchlistItem {
@@ -50,6 +62,27 @@ pub struct QuoteSummary {
     pub status: QuoteStatus,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PricePoint {
+    pub ts: String,
+    pub close: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SymbolPerformance {
+    pub symbol: String,
+    pub range: TimeRange,
+    pub points: Vec<PricePoint>,
+    pub min: f64,
+    pub max: f64,
+    pub start: f64,
+    pub end: f64,
+    pub last_updated_at: String,
+    pub status: QuoteStatus,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

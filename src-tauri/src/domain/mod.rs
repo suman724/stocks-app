@@ -3,8 +3,8 @@ mod models;
 
 pub use errors::AppError;
 pub use models::{
-    AppProvider, AppSettings, AppSettingsInput, BootstrapPayload, ProviderTestResult, TimeRange,
-    QuoteStatus, QuoteSummary, WatchlistItem,
+    AppProvider, AppSettings, AppSettingsInput, BootstrapPayload, PricePoint, ProviderTestResult,
+    QuoteStatus, QuoteSummary, SymbolPerformance, TimeRange, WatchlistItem,
 };
 
 const MIN_API_KEY_LEN: usize = 8;

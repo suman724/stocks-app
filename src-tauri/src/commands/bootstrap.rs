@@ -12,5 +12,8 @@ pub fn get_app_bootstrap_data(app: AppHandle) -> Result<BootstrapPayload, AppErr
     let settings = SettingsStore::from_app(&app)?.load()?;
     let watchlist = WatchlistStore::from_app(&app)?.load()?;
 
-    Ok(BootstrapPayload { settings, watchlist })
+    Ok(BootstrapPayload {
+        settings,
+        watchlist,
+    })
 }

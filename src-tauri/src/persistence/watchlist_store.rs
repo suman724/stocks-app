@@ -119,4 +119,3 @@ mod tests {
         assert_eq!(loaded, items);
     }
 }
-

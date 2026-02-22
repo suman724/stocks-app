@@ -1,5 +1,8 @@
 use super::MarketDataProvider;
-use crate::domain::{unix_timestamp_secs, AppError, AppProvider, ProviderTestResult, QuoteStatus, QuoteSummary};
+use crate::domain::{
+    AppError, AppProvider, PricePoint, ProviderTestResult, QuoteStatus, QuoteSummary,
+    SymbolPerformance, TimeRange, unix_timestamp_secs,
+};
 use async_trait::async_trait;
 use reqwest::StatusCode;
 use serde_json::Value;
@@ -98,6 +101,49 @@ impl MarketDataProvider for TwelveDataAdapter {
 
         parse_quote_payload(symbol, payload)
     }
+
+    async fn fetch_symbol_performance(
+        &self,
+        symbol: &str,
+        range: TimeRange,
+        api_key: &str,
+    ) -> Result<SymbolPerformance, AppError> {
+        let sanitized_key = api_key.trim();
+        if sanitized_key.is_empty() {
+            return Err(AppError::validation(
+                "invalid_settings",
+                "Save a valid API key before loading chart data.",
+            ));
+        }
+
+        let (interval, outputsize) = range_request_config(range);
+        let response = self
+            .client
+            .get(format!("{}/time_series", self.base_url))
+            .query(&[
+                ("symbol", symbol),
+                ("interval", interval),
+                ("outputsize", outputsize),
+                ("apikey", sanitized_key),
+            ])
+            .send()
+            .await
+            .map_err(map_transport_error)?;
+
+        let status = response.status();
+        let payload = response.json::<Value>().await.map_err(|err| {
+            AppError::provider(
+                "provider_payload_parse_failed",
+                format!("Unable to parse provider response: {err}"),
+            )
+        })?;
+
+        if !status.is_success() || payload_has_error_status(&payload) {
+            return Err(map_provider_error(status, &payload));
+        }
+
+        parse_symbol_performance_payload(symbol, range, payload)
+    }
 }
 
 fn payload_has_error_status(payload: &Value) -> bool {
@@ -122,10 +168,7 @@ fn map_transport_error(err: reqwest::Error) -> AppError {
         );
     }
 
-    AppError::provider(
-        "network_error",
-        format!("Provider request failed: {err}"),
-    )
+    AppError::provider("network_error", format!("Provider request failed: {err}"))
 }
 
 fn map_provider_error(status: StatusCode, payload: &Value) -> AppError {
@@ -163,8 +206,9 @@ fn parse_quote_payload(symbol: &str, payload: Value) -> Result<QuoteSummary, App
         .map(str::to_string)
         .unwrap_or_else(|| symbol.to_string());
 
-    let price = parse_number_field(&payload, &["close", "price", "last"])
-        .ok_or_else(|| AppError::provider("provider_payload_invalid", "Quote payload missing price."))?;
+    let price = parse_number_field(&payload, &["close", "price", "last"]).ok_or_else(|| {
+        AppError::provider("provider_payload_invalid", "Quote payload missing price.")
+    })?;
 
     let change_abs = parse_number_field(&payload, &["change"]);
     let change_pct = parse_number_field(&payload, &["percent_change", "change_percent"]);
@@ -200,6 +244,91 @@ fn parse_number_field(payload: &Value, keys: &[&str]) -> Option<f64> {
 
         let as_str = value.as_str()?;
         as_str.parse::<f64>().ok()
+    })
+}
+
+fn range_request_config(range: TimeRange) -> (&'static str, &'static str) {
+    match range {
+        TimeRange::OneDay => ("1h", "24"),
+        TimeRange::OneWeek => ("1day", "7"),
+        TimeRange::OneMonth => ("1day", "30"),
+        TimeRange::ThreeMonths => ("1day", "90"),
+        TimeRange::OneYear => ("1week", "52"),
+    }
+}
+
+fn parse_symbol_performance_payload(
+    symbol: &str,
+    range: TimeRange,
+    payload: Value,
+) -> Result<SymbolPerformance, AppError> {
+    let values = payload
+        .get("values")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            AppError::provider(
+                "provider_payload_invalid",
+                "Time series payload missing values.",
+            )
+        })?;
+
+    if values.is_empty() {
+        return Err(AppError::provider(
+            "provider_payload_invalid",
+            "Time series payload contains no values.",
+        ));
+    }
+
+    let mut points: Vec<PricePoint> = values
+        .iter()
+        .filter_map(|entry| {
+            let ts = entry.get("datetime")?.as_str()?.to_string();
+            let close = parse_number_field(entry, &["close"])?;
+            Some(PricePoint { ts, close })
+        })
+        .collect();
+
+    if points.is_empty() {
+        return Err(AppError::provider(
+            "provider_payload_invalid",
+            "Time series payload contains no valid close values.",
+        ));
+    }
+
+    points.reverse();
+    let start = points.first().map(|point| point.close).ok_or_else(|| {
+        AppError::provider(
+            "provider_payload_invalid",
+            "Time series payload missing start point.",
+        )
+    })?;
+    let end = points.last().map(|point| point.close).ok_or_else(|| {
+        AppError::provider(
+            "provider_payload_invalid",
+            "Time series payload missing end point.",
+        )
+    })?;
+    let min = points
+        .iter()
+        .fold(f64::INFINITY, |acc, point| acc.min(point.close));
+    let max = points
+        .iter()
+        .fold(f64::NEG_INFINITY, |acc, point| acc.max(point.close));
+    let last_updated_at = points
+        .last()
+        .map(|point| point.ts.clone())
+        .unwrap_or_else(|| unix_timestamp_secs().to_string());
+
+    Ok(SymbolPerformance {
+        symbol: symbol.to_string(),
+        range,
+        points,
+        min,
+        max,
+        start,
+        end,
+        last_updated_at,
+        status: QuoteStatus::Fresh,
     })
 }
 
@@ -256,6 +385,34 @@ mod tests {
         });
 
         let result = parse_quote_payload("AAPL", payload);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn parse_symbol_performance_payload_maps_points_and_metrics() {
+        let payload = json!({
+            "meta": { "exchange_timezone": "UTC" },
+            "values": [
+                { "datetime": "2026-02-21 10:00:00", "close": "201.0" },
+                { "datetime": "2026-02-20 10:00:00", "close": "199.0" },
+                { "datetime": "2026-02-19 10:00:00", "close": "200.0" }
+            ]
+        });
+
+        let performance =
+            parse_symbol_performance_payload("AAPL", TimeRange::OneWeek, payload).unwrap();
+        assert_eq!(performance.points.len(), 3);
+        assert_eq!(performance.start, 200.0);
+        assert_eq!(performance.end, 201.0);
+        assert_eq!(performance.min, 199.0);
+        assert_eq!(performance.max, 201.0);
+        assert_eq!(performance.status, QuoteStatus::Fresh);
+    }
+
+    #[test]
+    fn parse_symbol_performance_payload_rejects_missing_values() {
+        let payload = json!({});
+        let result = parse_symbol_performance_payload("AAPL", TimeRange::OneWeek, payload);
         assert!(result.is_err());
     }
 }

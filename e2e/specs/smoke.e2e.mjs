@@ -21,6 +21,30 @@ async function openWatchlist() {
   await watchlistHeading.waitForDisplayed({ timeout: 15_000 });
 }
 
+async function clearWatchlist() {
+  // Keep removing the first visible row until no symbols remain.
+  // This makes the smoke run deterministic across persisted app state.
+  while (true) {
+    const removeButtons = await $$('button=Remove');
+    if (removeButtons.length === 0) {
+      break;
+    }
+
+    const firstRemove = removeButtons[0];
+    await firstRemove.scrollIntoView();
+    await firstRemove.waitForClickable({ timeout: 10_000 });
+    await firstRemove.click();
+
+    await browser.waitUntil(async () => {
+      const remainingButtons = await $$('button=Remove');
+      return remainingButtons.length < removeButtons.length;
+    }, {
+      timeout: 10_000,
+      timeoutMsg: 'Expected watchlist item to be removed.',
+    });
+  }
+}
+
 describe('Desktop smoke', () => {
   it('launches the app shell', async () => {
     const watchlistHeading = await $('h2=Watchlist');
@@ -47,30 +71,24 @@ describe('Desktop smoke', () => {
 
   it('supports watchlist and chart interactions', async () => {
     await openWatchlist();
+    await clearWatchlist();
 
     const symbolInput = await $('input[placeholder="Add symbol (e.g. AAPL)"]');
     await symbolInput.waitForDisplayed({ timeout: 10_000 });
+    await symbolInput.clearValue();
     await symbolInput.setValue(SMOKE_SYMBOL);
 
     const addButton = await $('button=Add');
     await addButton.click();
 
-    await browser.waitUntil(
-      async () => {
-        const symbolCard = await $(`strong=${SMOKE_SYMBOL}`);
-        const duplicateMessage = await $('p*=already in your watchlist');
-        return (await symbolCard.isExisting()) || (await duplicateMessage.isExisting());
-      },
-      {
-        timeout: 20_000,
-        timeoutMsg: 'Expected added symbol card or duplicate symbol validation message.',
-      }
+    const symbolCard = await $(
+      `//div[.//strong[normalize-space()="${SMOKE_SYMBOL}"] and .//button[normalize-space()="View Chart"]]`
     );
+    await symbolCard.waitForDisplayed({ timeout: 20_000 });
 
-    const viewChartButton = await $(
-      `//strong[normalize-space()="${SMOKE_SYMBOL}"]/ancestor::div[contains(@style, "justify-content")][1]//button[normalize-space()="View Chart"]`
-    );
-    await viewChartButton.waitForDisplayed({ timeout: 20_000 });
+    const viewChartButton = await symbolCard.$('button=View Chart');
+    await viewChartButton.scrollIntoView();
+    await viewChartButton.waitForClickable({ timeout: 20_000 });
     await viewChartButton.click();
 
     const chartHeading = await $('h2=Performance Chart');

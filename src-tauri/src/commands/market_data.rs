@@ -3,6 +3,7 @@ use crate::domain::{
     unix_timestamp_secs,
 };
 use crate::http::build_http_client;
+use crate::observability::CommandSpan;
 use crate::persistence::{
     QuoteCacheMap, QuoteCacheStore, SettingsStore, TimeSeriesCacheStore, WatchlistStore,
     is_cache_fresh, is_timeseries_cache_fresh, to_cached_entry, to_stale_performance,
@@ -15,71 +16,103 @@ const QUOTE_REQUEST_TIMEOUT_SECONDS: u64 = 8;
 
 #[tauri::command]
 pub async fn refresh_watchlist_quotes(app: AppHandle) -> Result<Vec<QuoteSummary>, AppError> {
-    let settings = SettingsStore::from_app(&app)?.load()?;
-    if settings.api_key.trim().is_empty() {
-        return Err(AppError::validation(
-            "invalid_settings",
-            "Save an API key before refreshing quotes.",
-        ));
-    }
-
-    let watchlist = WatchlistStore::from_app(&app)?.load()?;
-    if watchlist.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let cache_store = QuoteCacheStore::from_app(&app)?;
-    let mut cache = cache_store.load()?;
-    let client = build_http_client(QUOTE_REQUEST_TIMEOUT_SECONDS)?;
-    let provider = TwelveDataAdapter::new(client);
-
-    let now = unix_timestamp_secs();
-    let mut quotes = Vec::with_capacity(watchlist.len());
-
-    for item in &watchlist {
-        let symbol = item.symbol.clone();
-        if let Some(entry) = cache.get(&symbol)
-            && is_cache_fresh(entry.cached_at, now)
-        {
-            let mut fresh_quote = entry.quote.clone();
-            fresh_quote.status = QuoteStatus::Fresh;
-            fresh_quote.error_code = None;
-            fresh_quote.error_message = None;
-            quotes.push(fresh_quote);
-            continue;
+    let span = CommandSpan::start("refresh_watchlist_quotes", &[]);
+    let result = async {
+        let settings = SettingsStore::from_app(&app)?.load()?;
+        if settings.api_key.trim().is_empty() {
+            return Err(AppError::validation(
+                "invalid_settings",
+                "Save an API key before refreshing quotes.",
+            ));
         }
 
-        match provider.fetch_quote(&symbol, &settings.api_key).await {
-            Ok(mut quote) => {
-                quote.status = QuoteStatus::Fresh;
-                quote.error_code = None;
-                quote.error_message = None;
-                cache.insert(symbol.clone(), to_cached_entry(quote.clone()));
-                quotes.push(quote);
+        let watchlist = WatchlistStore::from_app(&app)?.load()?;
+        if watchlist.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let cache_store = QuoteCacheStore::from_app(&app)?;
+        let mut cache = cache_store.load()?;
+        let client = build_http_client(QUOTE_REQUEST_TIMEOUT_SECONDS)?;
+        let provider = TwelveDataAdapter::new(client);
+
+        let now = unix_timestamp_secs();
+        let mut quotes = Vec::with_capacity(watchlist.len());
+
+        for item in &watchlist {
+            let symbol = item.symbol.clone();
+            if let Some(entry) = cache.get(&symbol)
+                && is_cache_fresh(entry.cached_at, now)
+            {
+                let mut fresh_quote = entry.quote.clone();
+                fresh_quote.status = QuoteStatus::Fresh;
+                fresh_quote.error_code = None;
+                fresh_quote.error_message = None;
+                quotes.push(fresh_quote);
+                continue;
             }
-            Err(err) => {
-                if let Some(entry) = cache.get(&symbol) {
-                    quotes.push(to_stale_quote(entry, &err));
-                } else {
-                    quotes.push(QuoteSummary {
-                        symbol: symbol.clone(),
-                        price: 0.0,
-                        change_abs: None,
-                        change_pct: None,
-                        currency: None,
-                        last_updated_at: unix_timestamp_secs().to_string(),
-                        status: QuoteStatus::Error,
-                        error_code: Some(err.code),
-                        error_message: Some(err.message),
-                    });
+
+            match provider.fetch_quote(&symbol, &settings.api_key).await {
+                Ok(mut quote) => {
+                    quote.status = QuoteStatus::Fresh;
+                    quote.error_code = None;
+                    quote.error_message = None;
+                    cache.insert(symbol.clone(), to_cached_entry(quote.clone()));
+                    quotes.push(quote);
+                }
+                Err(err) => {
+                    if let Some(entry) = cache.get(&symbol) {
+                        quotes.push(to_stale_quote(entry, &err));
+                    } else {
+                        quotes.push(QuoteSummary {
+                            symbol: symbol.clone(),
+                            price: 0.0,
+                            change_abs: None,
+                            change_pct: None,
+                            currency: None,
+                            last_updated_at: unix_timestamp_secs().to_string(),
+                            status: QuoteStatus::Error,
+                            error_code: Some(err.code),
+                            error_message: Some(err.message),
+                        });
+                    }
                 }
             }
         }
-    }
 
-    trim_cache_to_watchlist(&mut cache, &watchlist);
-    cache_store.save(&cache)?;
-    Ok(quotes)
+        trim_cache_to_watchlist(&mut cache, &watchlist);
+        cache_store.save(&cache)?;
+        Ok(quotes)
+    }
+    .await;
+
+    match result {
+        Ok(quotes) => {
+            let fresh_count = quotes
+                .iter()
+                .filter(|quote| quote.status == QuoteStatus::Fresh)
+                .count();
+            let stale_count = quotes
+                .iter()
+                .filter(|quote| quote.status == QuoteStatus::Stale)
+                .count();
+            let error_count = quotes
+                .iter()
+                .filter(|quote| quote.status == QuoteStatus::Error)
+                .count();
+            span.ok(&[
+                ("quote_count", quotes.len().to_string()),
+                ("fresh_count", fresh_count.to_string()),
+                ("stale_count", stale_count.to_string()),
+                ("error_count", error_count.to_string()),
+            ]);
+            Ok(quotes)
+        }
+        Err(err) => {
+            span.err(&err, &[]);
+            Err(err)
+        }
+    }
 }
 
 fn trim_cache_to_watchlist(cache: &mut QuoteCacheMap, watchlist: &[crate::domain::WatchlistItem]) {
@@ -94,7 +127,7 @@ pub async fn get_symbol_performance(
     symbol: String,
     range: TimeRange,
 ) -> Result<SymbolPerformance, AppError> {
-    fetch_symbol_performance(app, symbol, range, false).await
+    fetch_symbol_performance("get_symbol_performance", app, symbol, range, false).await
 }
 
 #[tauri::command]
@@ -103,57 +136,83 @@ pub async fn refresh_symbol_performance(
     symbol: String,
     range: TimeRange,
 ) -> Result<SymbolPerformance, AppError> {
-    fetch_symbol_performance(app, symbol, range, true).await
+    fetch_symbol_performance("refresh_symbol_performance", app, symbol, range, true).await
 }
 
 async fn fetch_symbol_performance(
+    command_name: &'static str,
     app: AppHandle,
     symbol: String,
     range: TimeRange,
     force_refresh: bool,
 ) -> Result<SymbolPerformance, AppError> {
-    let normalized_symbol = normalize_symbol(&symbol)?;
-    let settings = SettingsStore::from_app(&app)?.load()?;
-    if settings.api_key.trim().is_empty() {
-        return Err(AppError::validation(
-            "invalid_settings",
-            "Save an API key before loading chart data.",
-        ));
+    let span = CommandSpan::start(
+        command_name,
+        &[
+            ("symbol", symbol.clone()),
+            ("range", range.as_key().to_string()),
+            ("force_refresh", force_refresh.to_string()),
+        ],
+    );
+    let result = async {
+        let normalized_symbol = normalize_symbol(&symbol)?;
+        let settings = SettingsStore::from_app(&app)?.load()?;
+        if settings.api_key.trim().is_empty() {
+            return Err(AppError::validation(
+                "invalid_settings",
+                "Save an API key before loading chart data.",
+            ));
+        }
+
+        let cache_store = TimeSeriesCacheStore::from_app(&app)?;
+        let now = unix_timestamp_secs();
+        let cached_entry = cache_store.load(&normalized_symbol, range)?;
+
+        if !force_refresh
+            && let Some(entry) = cached_entry.as_ref()
+            && is_timeseries_cache_fresh(entry.cached_at, now)
+        {
+            let mut fresh_performance = entry.performance.clone();
+            fresh_performance.status = QuoteStatus::Fresh;
+            return Ok(fresh_performance);
+        }
+
+        let client = build_http_client(QUOTE_REQUEST_TIMEOUT_SECONDS)?;
+        let provider = TwelveDataAdapter::new(client);
+
+        match provider
+            .fetch_symbol_performance(&normalized_symbol, range, &settings.api_key)
+            .await
+        {
+            Ok(mut performance) => {
+                performance.status = QuoteStatus::Fresh;
+                cache_store.save(&normalized_symbol, range, performance.clone())?;
+                Ok(performance)
+            }
+            Err(err) => {
+                if let Some(entry) = cached_entry {
+                    let mut stale = to_stale_performance(&entry);
+                    stale.status = QuoteStatus::Stale;
+                    Ok(stale)
+                } else {
+                    Err(err)
+                }
+            }
+        }
     }
+    .await;
 
-    let cache_store = TimeSeriesCacheStore::from_app(&app)?;
-    let now = unix_timestamp_secs();
-    let cached_entry = cache_store.load(&normalized_symbol, range)?;
-
-    if !force_refresh
-        && let Some(entry) = cached_entry.as_ref()
-        && is_timeseries_cache_fresh(entry.cached_at, now)
-    {
-        let mut fresh_performance = entry.performance.clone();
-        fresh_performance.status = QuoteStatus::Fresh;
-        return Ok(fresh_performance);
-    }
-
-    let client = build_http_client(QUOTE_REQUEST_TIMEOUT_SECONDS)?;
-    let provider = TwelveDataAdapter::new(client);
-
-    match provider
-        .fetch_symbol_performance(&normalized_symbol, range, &settings.api_key)
-        .await
-    {
-        Ok(mut performance) => {
-            performance.status = QuoteStatus::Fresh;
-            cache_store.save(&normalized_symbol, range, performance.clone())?;
+    match result {
+        Ok(performance) => {
+            span.ok(&[
+                ("status", format!("{:?}", performance.status)),
+                ("points", performance.points.len().to_string()),
+            ]);
             Ok(performance)
         }
         Err(err) => {
-            if let Some(entry) = cached_entry {
-                let mut stale = to_stale_performance(&entry);
-                stale.status = QuoteStatus::Stale;
-                Ok(stale)
-            } else {
-                Err(err)
-            }
+            span.err(&err, &[]);
+            Err(err)
         }
     }
 }

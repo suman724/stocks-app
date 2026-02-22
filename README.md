@@ -51,11 +51,19 @@ A `Makefile` is provided for common development tasks:
 - `make lint`: Run ESLint and cargo clippy
 - `make format`: Run Prettier and cargo fmt
 
+## Phase 4 QA and Release Docs
+
+- `docs/e2e-smoke-checklist.md`: Desktop smoke test scenarios to run on macOS and Windows builds.
+- `docs/e2e-smoke-results.md`: Execution log for completed smoke runs per platform.
+- `docs/manual-qa-checklist.md`: Robustness checklist for invalid key, offline, rate-limit, and cache fallback paths.
+- `docs/release-checklist.md`: Pre-release gate for artifacts, tests, and rollback/readiness checks.
+
 ## Project Structure
 
 - `/src`: React + TypeScript frontend codebase.
 - `/src-tauri`: Rust backend codebase (Tauri commands, market data adapter, local storage).
 - `/architecture/architecture.md`: Detailed architectural specification.
+- `/docs`: QA, smoke test, and release checklists.
 - `/AGENTS.md`: Strict rules and conventions for AI coding agents working on this repo.
 
 ## Configuration

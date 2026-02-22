@@ -25,9 +25,11 @@ export const SettingsScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isTesting, setIsTesting] = useState<boolean>(false);
+  const [isClearingCache, setIsClearingCache] = useState<boolean>(false);
   const [showApiKey, setShowApiKey] = useState<boolean>(false);
   const [saveFeedback, setSaveFeedback] = useState<Feedback | null>(null);
   const [testFeedback, setTestFeedback] = useState<Feedback | null>(null);
+  const [cacheFeedback, setCacheFeedback] = useState<Feedback | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -135,6 +137,20 @@ export const SettingsScreen: React.FC = () => {
       setTestFeedback({ kind: 'error', message: error.message });
     } finally {
       setIsTesting(false);
+    }
+  }
+
+  async function handleClearCache() {
+    setCacheFeedback(null);
+    setIsClearingCache(true);
+    try {
+      await tauriClient.clearCache();
+      setCacheFeedback({ kind: 'success', message: 'Cache cleared.' });
+    } catch (rawError) {
+      const error = rawError as AppError;
+      setCacheFeedback({ kind: 'error', message: error.message });
+    } finally {
+      setIsClearingCache(false);
     }
   }
 
@@ -256,6 +272,9 @@ export const SettingsScreen: React.FC = () => {
             >
               {isTesting ? 'Testing...' : 'Test Connection'}
             </button>
+            <button type="button" onClick={handleClearCache} disabled={isClearingCache}>
+              {isClearingCache ? 'Clearing...' : 'Reset Cache'}
+            </button>
           </div>
 
           {saveFeedback && (
@@ -263,6 +282,11 @@ export const SettingsScreen: React.FC = () => {
           )}
           {testFeedback && (
             <p style={{ margin: 0, color: feedbackColor(testFeedback.kind) }}>{testFeedback.message}</p>
+          )}
+          {cacheFeedback && (
+            <p style={{ margin: 0, color: feedbackColor(cacheFeedback.kind) }}>
+              {cacheFeedback.message}
+            </p>
           )}
         </form>
       )}

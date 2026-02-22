@@ -35,6 +35,11 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: rust-${{ runner.os }}-src-tauri
+          workspaces: |
+            src-tauri -> target
+          cache-on-failure: true
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -48,14 +53,17 @@ jobs:
             libssl-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev
+      - name: Pre-fetch Rust dependencies
+        run: cargo fetch --locked
+        working-directory: ./src-tauri
       - name: Check formatting
         run: cargo fmt -- --check
         working-directory: ./src-tauri
       - name: Run clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --locked -- -D warnings
         working-directory: ./src-tauri
       - name: Run backend tests
-        run: cargo test
+        run: cargo test --locked
         working-directory: ./src-tauri
 
   desktop-build-artifacts:
@@ -75,6 +83,11 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: rust-${{ runner.os }}-src-tauri
+          workspaces: |
+            src-tauri -> target
+          cache-on-failure: true
       - name: Install dependencies
         run: npm ci
       - name: Build macOS bundle
@@ -105,6 +118,11 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: rust-${{ runner.os }}-src-tauri
+          workspaces: |
+            src-tauri -> target
+          cache-on-failure: true
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -125,8 +143,15 @@ jobs:
         run: npm ci
       - name: Install E2E dependencies
         run: make e2e-setup
+      - name: Cache tauri-driver binary
+        id: tauri-driver-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/tauri-driver
+          key: tauri-driver-${{ runner.os }}-v2.0.5
       - name: Install tauri-driver
-        run: cargo install tauri-driver --locked
+        if: steps.tauri-driver-cache.outputs.cache-hit != 'true'
+        run: cargo install tauri-driver --locked --version 2.0.5
       - name: Verify tauri-driver
         run: |
           which tauri-driver

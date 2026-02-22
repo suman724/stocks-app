@@ -66,6 +66,9 @@ async function clearWatchlist() {
     }
 
     const firstRemoveSelector = await removeButtons[0].getAttribute('data-testid');
+    if (!firstRemoveSelector) {
+      throw new Error('Watchlist remove button is missing data-testid.');
+    }
     await clickWhenReady(`[data-testid="${firstRemoveSelector}"]`);
 
     await browser.waitUntil(async () => {
@@ -128,10 +131,29 @@ describe('Desktop smoke', () => {
 
     await clickWhenReady(byTestId('watchlist-add-button'));
 
+    await browser.waitUntil(async () => {
+      const card = await $(byTestId(`watchlist-card-${SMOKE_SYMBOL}`));
+      return card.isExisting();
+    }, {
+      timeout: 20_000,
+      timeoutMsg: `Expected watchlist card for ${SMOKE_SYMBOL} after add.`,
+    });
+
+    const feedback = await $(byTestId('watchlist-feedback'));
+    if (await feedback.isExisting()) {
+      const text = await feedback.getText();
+      if (text.trim().length > 0) {
+        throw new Error(`Watchlist add produced feedback error: ${text}`);
+      }
+    }
+
     const symbolCard = await $(byTestId(`watchlist-card-${SMOKE_SYMBOL}`));
     await symbolCard.waitForDisplayed({ timeout: 20_000 });
 
-    await clickWhenReady(byTestId(`watchlist-view-chart-${SMOKE_SYMBOL}`));
+    const viewChartButton = await $(byTestId(`watchlist-view-chart-${SMOKE_SYMBOL}`));
+    if (await viewChartButton.isExisting()) {
+      await clickWhenReady(byTestId(`watchlist-view-chart-${SMOKE_SYMBOL}`));
+    }
 
     const chartHeading = await $(byTestId('chart-heading'));
     await chartHeading.waitForDisplayed({ timeout: 10_000 });

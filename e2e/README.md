@@ -33,12 +33,18 @@ This will:
   - Override which app binary path is used.
 - `TAURI_DRIVER_PATH=/custom/path/to/tauri-driver make e2e-smoke`
   - Override the driver binary path.
+- `TAURI_NATIVE_DRIVER_PATH=/custom/path/to/WebKitWebDriver make e2e-smoke`
+  - Override the native WebKit driver path (Linux WebKit backend).
+- `E2E_TWELVEDATA_API_KEY=<real-key> make e2e-smoke`
+  - Use a valid provider key to avoid invalid-key warning paths during smoke runs.
 
 ## Notes
 
 - The harness targets `src-tauri/target/debug/tauri-stocks-app(.exe)` by default.
 - Official `tauri-driver` support is limited on macOS. If app startup fails there, run smoke tests on Windows/Linux or switch to a macOS-capable driver setup.
 - CI automation is wired in `.github/workflows/ci.yml` as job `desktop-e2e-smoke-linux`.
+- CI can inject `E2E_TWELVEDATA_API_KEY` from repo/org secret `E2E_TWELVEDATA_API_KEY`.
+- On E2E test failure, screenshots are captured under `e2e/artifacts/screenshots/` and uploaded from CI as artifact `e2e-failure-screenshots-linux`.
 
 ## Common Failure: `spawn tauri-driver ENOENT`
 
@@ -57,3 +63,14 @@ If you see this on macOS, the current `tauri-driver` build does not support desk
 
 - Run the desktop smoke suite on a Windows/Linux machine.
 - Keep macOS validation in the manual smoke checklist until we add an alternative macOS-capable E2E path.
+
+## Common Failure: `can not find binary WebKitWebDriver in the PATH`
+
+Linux WebDriver smoke requires the WebKit native driver.
+
+1. Install it:
+   - Ubuntu/Debian: `sudo apt-get install -y webkit2gtk-driver`
+2. Verify:
+   - `which WebKitWebDriver`
+3. If installed in a non-standard location, set:
+   - `TAURI_NATIVE_DRIVER_PATH=/path/to/WebKitWebDriver make e2e-smoke`

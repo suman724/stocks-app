@@ -165,22 +165,36 @@ export const WatchlistScreen: React.FC<WatchlistScreenProps> = ({
       <form onSubmit={handleAddSymbol} style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
         <input
           type="text"
+          data-testid="watchlist-symbol-input"
           value={newSymbol}
           onChange={(event) => setNewSymbol(event.target.value)}
           placeholder="Add symbol (e.g. AAPL)"
           style={{ minWidth: '180px' }}
         />
-        <button type="submit">Add</button>
-        <button type="button" onClick={refreshQuotes} disabled={isRefreshing || watchlist.length === 0}>
+        <button type="submit" data-testid="watchlist-add-button">
+          Add
+        </button>
+        <button
+          type="button"
+          data-testid="watchlist-refresh-button"
+          onClick={refreshQuotes}
+          disabled={isRefreshing || watchlist.length === 0}
+        >
           {isRefreshing ? 'Refreshing...' : 'Refresh'}
         </button>
       </form>
 
-      {feedback && <p style={{ color: '#b71c1c' }}>{feedback}</p>}
-      {isLoading && <p>Loading watchlist...</p>}
+      {feedback && (
+        <p data-testid="watchlist-feedback" style={{ color: '#b71c1c' }}>
+          {feedback}
+        </p>
+      )}
+      {isLoading && <p data-testid="watchlist-loading">Loading watchlist...</p>}
 
       {!isLoading && watchlist.length === 0 && (
-        <p style={{ marginTop: '16px' }}>No symbols yet. Add one to start tracking quotes.</p>
+        <p data-testid="watchlist-empty" style={{ marginTop: '16px' }}>
+          No symbols yet. Add one to start tracking quotes.
+        </p>
       )}
 
       {!isLoading && watchlist.length > 0 && (
@@ -191,6 +205,7 @@ export const WatchlistScreen: React.FC<WatchlistScreenProps> = ({
             return (
               <div
                 key={item.symbol}
+                data-testid={`watchlist-card-${item.symbol}`}
                 style={{
                   border: '1px solid #ddd',
                   borderRadius: '8px',
@@ -202,10 +217,18 @@ export const WatchlistScreen: React.FC<WatchlistScreenProps> = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <strong>{item.symbol}</strong>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button type="button" onClick={() => onSelectSymbol?.(item.symbol)}>
+                    <button
+                      type="button"
+                      data-testid={`watchlist-view-chart-${item.symbol}`}
+                      onClick={() => onSelectSymbol?.(item.symbol)}
+                    >
                       View Chart
                     </button>
-                    <button type="button" onClick={() => handleRemoveSymbol(item.symbol)}>
+                    <button
+                      type="button"
+                      data-testid={`watchlist-remove-${item.symbol}`}
+                      onClick={() => handleRemoveSymbol(item.symbol)}
+                    >
                       Remove
                     </button>
                   </div>

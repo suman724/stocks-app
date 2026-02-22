@@ -196,6 +196,7 @@ export const SettingsScreen: React.FC = () => {
             <div style={{ display: 'flex', gap: '8px' }}>
               <input
                 type={showApiKey ? 'text' : 'password'}
+                data-testid="settings-api-key-input"
                 value={settings.apiKey}
                 onChange={(event) =>
                   setSettings((current) => ({ ...current, apiKey: event.target.value }))
@@ -262,29 +263,48 @@ export const SettingsScreen: React.FC = () => {
           </label>
 
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button type="submit" disabled={isSaving}>
+            <button type="submit" data-testid="settings-save-button" disabled={isSaving}>
               {isSaving ? 'Saving...' : 'Save Settings'}
             </button>
             <button
               type="button"
+              data-testid="settings-test-connection-button"
               onClick={handleTestConnection}
               disabled={isTesting || isSaving || isDirty}
             >
               {isTesting ? 'Testing...' : 'Test Connection'}
             </button>
-            <button type="button" onClick={handleClearCache} disabled={isClearingCache}>
+            <button
+              type="button"
+              data-testid="settings-reset-cache-button"
+              onClick={handleClearCache}
+              disabled={isClearingCache}
+            >
               {isClearingCache ? 'Clearing...' : 'Reset Cache'}
             </button>
           </div>
 
           {saveFeedback && (
-            <p style={{ margin: 0, color: feedbackColor(saveFeedback.kind) }}>{saveFeedback.message}</p>
+            <p
+              data-testid="settings-save-feedback"
+              style={{ margin: 0, color: feedbackColor(saveFeedback.kind) }}
+            >
+              {saveFeedback.message}
+            </p>
           )}
           {testFeedback && (
-            <p style={{ margin: 0, color: feedbackColor(testFeedback.kind) }}>{testFeedback.message}</p>
+            <p
+              data-testid="settings-test-feedback"
+              style={{ margin: 0, color: feedbackColor(testFeedback.kind) }}
+            >
+              {testFeedback.message}
+            </p>
           )}
           {cacheFeedback && (
-            <p style={{ margin: 0, color: feedbackColor(cacheFeedback.kind) }}>
+            <p
+              data-testid="settings-cache-feedback"
+              style={{ margin: 0, color: feedbackColor(cacheFeedback.kind) }}
+            >
               {cacheFeedback.message}
             </p>
           )}

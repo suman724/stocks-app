@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +8,7 @@ import net from 'node:net';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
+const screenshotDir = path.join(projectRoot, 'e2e', 'artifacts', 'screenshots');
 
 let tauriDriverProcess;
 
@@ -96,12 +97,38 @@ function resolveTauriDriverBinary() {
   return existsSync(candidate) ? candidate : driverName;
 }
 
+function resolveNativeDriverPath() {
+  if (process.env.TAURI_NATIVE_DRIVER_PATH) {
+    return process.env.TAURI_NATIVE_DRIVER_PATH;
+  }
+
+  if (process.platform !== 'linux') {
+    return null;
+  }
+
+  const probe = spawnSync('which', ['WebKitWebDriver'], {
+    cwd: projectRoot,
+    stdio: 'pipe',
+    encoding: 'utf8',
+  });
+
+  if (probe.status === 0) {
+    return probe.stdout.trim();
+  }
+
+  return null;
+}
+
 function stopTauriDriver() {
   if (!tauriDriverProcess || tauriDriverProcess.killed) {
     return;
   }
   tauriDriverProcess.kill('SIGTERM');
   tauriDriverProcess = undefined;
+}
+
+function sanitizeName(value) {
+  return value.replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 120);
 }
 
 export const config = {
@@ -165,10 +192,21 @@ export const config = {
 
     const driverBinary = resolveTauriDriverBinary();
     ensureTauriDriverAvailable(driverBinary);
+    const nativeDriverPath = resolveNativeDriverPath();
+    if (process.platform === 'linux' && !nativeDriverPath) {
+      throw new Error(
+        "[e2e] WebKitWebDriver was not found. Install package 'webkit2gtk-driver' or set TAURI_NATIVE_DRIVER_PATH to the WebKitWebDriver binary."
+      );
+    }
+
+    const tauriDriverArgs = ['--port', '4444'];
+    if (nativeDriverPath) {
+      tauriDriverArgs.push('--native-driver', nativeDriverPath);
+    }
 
     let startError;
 
-    tauriDriverProcess = spawn(driverBinary, ['--port', '4444'], {
+    tauriDriverProcess = spawn(driverBinary, tauriDriverArgs, {
       cwd: projectRoot,
       stdio: 'inherit',
       shell: process.platform === 'win32',
@@ -193,6 +231,24 @@ export const config = {
   },
   afterSession() {
     stopTauriDriver();
+  },
+  async afterTest(test, _context, { error, passed }) {
+    if (passed || !error) {
+      return;
+    }
+
+    try {
+      mkdirSync(screenshotDir, { recursive: true });
+      const title = `${test.parent || 'suite'}__${test.title || 'test'}`;
+      const filename = `${Date.now()}_${sanitizeName(title)}.png`;
+      const targetPath = path.join(screenshotDir, filename);
+      await browser.saveScreenshot(targetPath);
+      console.log(`[e2e] Saved failure screenshot: ${targetPath}`);
+    } catch (captureError) {
+      const message =
+        captureError instanceof Error ? captureError.message : String(captureError);
+      console.warn(`[e2e] Failed to capture screenshot: ${message}`);
+    }
   },
   onComplete() {
     stopTauriDriver();

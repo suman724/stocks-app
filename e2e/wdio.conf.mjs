@@ -96,6 +96,28 @@ function resolveTauriDriverBinary() {
   return existsSync(candidate) ? candidate : driverName;
 }
 
+function resolveNativeDriverPath() {
+  if (process.env.TAURI_NATIVE_DRIVER_PATH) {
+    return process.env.TAURI_NATIVE_DRIVER_PATH;
+  }
+
+  if (process.platform !== 'linux') {
+    return null;
+  }
+
+  const probe = spawnSync('which', ['WebKitWebDriver'], {
+    cwd: projectRoot,
+    stdio: 'pipe',
+    encoding: 'utf8',
+  });
+
+  if (probe.status === 0) {
+    return probe.stdout.trim();
+  }
+
+  return null;
+}
+
 function stopTauriDriver() {
   if (!tauriDriverProcess || tauriDriverProcess.killed) {
     return;
@@ -165,10 +187,21 @@ export const config = {
 
     const driverBinary = resolveTauriDriverBinary();
     ensureTauriDriverAvailable(driverBinary);
+    const nativeDriverPath = resolveNativeDriverPath();
+    if (process.platform === 'linux' && !nativeDriverPath) {
+      throw new Error(
+        "[e2e] WebKitWebDriver was not found. Install package 'webkit2gtk-driver' or set TAURI_NATIVE_DRIVER_PATH to the WebKitWebDriver binary."
+      );
+    }
+
+    const tauriDriverArgs = ['--port', '4444'];
+    if (nativeDriverPath) {
+      tauriDriverArgs.push('--native-driver', nativeDriverPath);
+    }
 
     let startError;
 
-    tauriDriverProcess = spawn(driverBinary, ['--port', '4444'], {
+    tauriDriverProcess = spawn(driverBinary, tauriDriverArgs, {
       cwd: projectRoot,
       stdio: 'inherit',
       shell: process.platform === 'win32',

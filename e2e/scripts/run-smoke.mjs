@@ -42,9 +42,38 @@ function assertDriverSupport(driverBinary) {
   }
 }
 
+function resolveNativeDriverPath() {
+  if (process.env.TAURI_NATIVE_DRIVER_PATH) {
+    return process.env.TAURI_NATIVE_DRIVER_PATH;
+  }
+
+  if (process.platform !== 'linux') {
+    return undefined;
+  }
+
+  const probe = spawnSync('which', ['WebKitWebDriver'], {
+    cwd: e2eRoot,
+    stdio: 'pipe',
+    encoding: 'utf8',
+  });
+
+  if (probe.status === 0) {
+    return probe.stdout.trim();
+  }
+
+  return undefined;
+}
+
 function main() {
   const driverBinary = resolveDriverBinary();
   assertDriverSupport(driverBinary);
+  const nativeDriverPath = resolveNativeDriverPath();
+
+  if (process.platform === 'linux' && !nativeDriverPath) {
+    throw new Error(
+      "[e2e] WebKitWebDriver not found on Linux. Install 'webkit2gtk-driver' or set TAURI_NATIVE_DRIVER_PATH."
+    );
+  }
 
   const run = spawnSync('wdio', ['run', './wdio.conf.mjs'], {
     cwd: e2eRoot,
@@ -53,6 +82,7 @@ function main() {
     env: {
       ...process.env,
       TAURI_DRIVER_PATH: process.env.TAURI_DRIVER_PATH || driverBinary,
+      ...(nativeDriverPath ? { TAURI_NATIVE_DRIVER_PATH: nativeDriverPath } : {}),
     },
   });
 

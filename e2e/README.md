@@ -33,6 +33,8 @@ This will:
   - Override which app binary path is used.
 - `TAURI_DRIVER_PATH=/custom/path/to/tauri-driver make e2e-smoke`
   - Override the driver binary path.
+- `TAURI_NATIVE_DRIVER_PATH=/custom/path/to/WebKitWebDriver make e2e-smoke`
+  - Override the native WebKit driver path (Linux WebKit backend).
 
 ## Notes
 
@@ -57,3 +59,14 @@ If you see this on macOS, the current `tauri-driver` build does not support desk
 
 - Run the desktop smoke suite on a Windows/Linux machine.
 - Keep macOS validation in the manual smoke checklist until we add an alternative macOS-capable E2E path.
+
+## Common Failure: `can not find binary WebKitWebDriver in the PATH`
+
+Linux WebDriver smoke requires the WebKit native driver.
+
+1. Install it:
+   - Ubuntu/Debian: `sudo apt-get install -y webkit2gtk-driver`
+2. Verify:
+   - `which WebKitWebDriver`
+3. If installed in a non-standard location, set:
+   - `TAURI_NATIVE_DRIVER_PATH=/path/to/WebKitWebDriver make e2e-smoke`

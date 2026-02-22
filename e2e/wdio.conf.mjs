@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +8,7 @@ import net from 'node:net';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
+const screenshotDir = path.join(projectRoot, 'e2e', 'artifacts', 'screenshots');
 
 let tauriDriverProcess;
 
@@ -126,6 +127,10 @@ function stopTauriDriver() {
   tauriDriverProcess = undefined;
 }
 
+function sanitizeName(value) {
+  return value.replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 120);
+}
+
 export const config = {
   runner: 'local',
   specs: ['./specs/**/*.e2e.mjs'],
@@ -226,6 +231,24 @@ export const config = {
   },
   afterSession() {
     stopTauriDriver();
+  },
+  async afterTest(test, _context, { error, passed }) {
+    if (passed || !error) {
+      return;
+    }
+
+    try {
+      mkdirSync(screenshotDir, { recursive: true });
+      const title = `${test.parent || 'suite'}__${test.title || 'test'}`;
+      const filename = `${Date.now()}_${sanitizeName(title)}.png`;
+      const targetPath = path.join(screenshotDir, filename);
+      await browser.saveScreenshot(targetPath);
+      console.log(`[e2e] Saved failure screenshot: ${targetPath}`);
+    } catch (captureError) {
+      const message =
+        captureError instanceof Error ? captureError.message : String(captureError);
+      console.warn(`[e2e] Failed to capture screenshot: ${message}`);
+    }
   },
   onComplete() {
     stopTauriDriver();

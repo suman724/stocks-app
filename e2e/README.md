@@ -44,6 +44,7 @@ This will:
 - Official `tauri-driver` support is limited on macOS. If app startup fails there, run smoke tests on Windows/Linux or switch to a macOS-capable driver setup.
 - CI automation is wired in `.github/workflows/ci.yml` as job `desktop-e2e-smoke-linux`.
 - CI can inject `E2E_TWELVEDATA_API_KEY` from repo/org secret `E2E_TWELVEDATA_API_KEY`.
+- On E2E test failure, screenshots are captured under `e2e/artifacts/screenshots/` and uploaded from CI as artifact `e2e-failure-screenshots-linux`.
 
 ## Common Failure: `spawn tauri-driver ENOENT`
 

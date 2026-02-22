@@ -86,7 +86,10 @@ function main() {
     },
   });
 
-  process.exit(run.status || 1);
+  if (typeof run.status === 'number') {
+    process.exit(run.status);
+  }
+  process.exit(1);
 }
 
 try {

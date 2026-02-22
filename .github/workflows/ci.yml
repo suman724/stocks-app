@@ -191,6 +191,13 @@ jobs:
         env:
           E2E_TWELVEDATA_API_KEY: ${{ secrets.E2E_TWELVEDATA_API_KEY }}
         run: xvfb-run -a make e2e-smoke
+      - name: Upload E2E failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure-screenshots-linux
+          if-no-files-found: ignore
+          path: e2e/artifacts/screenshots/**/*.png
 
   desktop-e2e-smoke-linux-skip-notice:
     if: ${{ needs.e2e-secret-check.outputs.has_e2e_api_key != 'true' }}

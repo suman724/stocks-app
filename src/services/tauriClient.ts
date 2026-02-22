@@ -97,4 +97,8 @@ export const tauriClient = {
       range,
     });
   },
+
+  clearCache: async (): Promise<void> => {
+    return await invokeWithError<void>('clear_cache');
+  },
 };

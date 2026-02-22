@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod domain;
 pub mod http;
+pub mod observability;
 pub mod persistence;
 pub mod provider;
 
@@ -26,7 +27,8 @@ pub fn run() {
             commands::watchlist::remove_symbol,
             commands::market_data::refresh_watchlist_quotes,
             commands::market_data::get_symbol_performance,
-            commands::market_data::refresh_symbol_performance
+            commands::market_data::refresh_symbol_performance,
+            commands::diagnostics::clear_cache
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

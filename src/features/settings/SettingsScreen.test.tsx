@@ -11,6 +11,7 @@ vi.mock('../../services/tauriClient', () => ({
     saveSettings: vi.fn(),
     testProviderConnection: vi.fn(),
     getWatchlist: vi.fn(),
+    clearCache: vi.fn(),
   },
 }));
 
@@ -33,6 +34,7 @@ describe('SettingsScreen', () => {
       provider: 'twelvedata',
       message: 'Connection successful.',
     });
+    vi.mocked(tauriClient.clearCache).mockResolvedValue();
   });
 
   it('loads and displays persisted settings', async () => {
@@ -67,5 +69,15 @@ describe('SettingsScreen', () => {
       });
     });
     expect(await screen.findByText('Settings saved.')).toBeInTheDocument();
+  });
+
+  it('clears cache from settings action', async () => {
+    render(<SettingsScreen />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Reset Cache' }));
+    await waitFor(() => {
+      expect(tauriClient.clearCache).toHaveBeenCalled();
+    });
+    expect(await screen.findByText('Cache cleared.')).toBeInTheDocument();
   });
 });

@@ -21,13 +21,18 @@ function App() {
         >
           <ul style={{ listStyle: 'none', display: 'flex', gap: '20px', margin: 0, padding: 0 }}>
             <li>
-              <Link to="/" style={{ textDecoration: 'none', color: '#333', fontWeight: 'bold' }}>
+              <Link
+                to="/"
+                data-testid="nav-watchlist-link"
+                style={{ textDecoration: 'none', color: '#333', fontWeight: 'bold' }}
+              >
                 Watchlist
               </Link>
             </li>
             <li>
               <Link
                 to="/settings"
+                data-testid="nav-settings-link"
                 style={{ textDecoration: 'none', color: '#333', fontWeight: 'bold' }}
               >
                 Settings

@@ -108,22 +108,31 @@ export const ChartPanel: React.FC<ChartPanelProps> = ({ selectedSymbol }) => {
   }
 
   return (
-    <div style={{ padding: '20px', borderLeft: '1px solid #ccc', minHeight: '100vh' }}>
-      <h2>Performance Chart</h2>
+    <div data-testid="chart-panel" style={{ padding: '20px', borderLeft: '1px solid #ccc', minHeight: '100vh' }}>
+      <h2 data-testid="chart-heading">Performance Chart</h2>
       {!selectedSymbol && <p>Select a symbol from your watchlist to view its performance.</p>}
 
       {selectedSymbol && (
         <>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '14px' }}>
-            <strong>{selectedSymbol}</strong>
-            <select value={range} onChange={(event) => setRange(event.target.value as TimeRange)}>
+            <strong data-testid="chart-selected-symbol">{selectedSymbol}</strong>
+            <select
+              data-testid="chart-range-select"
+              value={range}
+              onChange={(event) => setRange(event.target.value as TimeRange)}
+            >
               {RANGE_OPTIONS.map((item) => (
                 <option key={item} value={item}>
                   {item}
                 </option>
               ))}
             </select>
-            <button type="button" onClick={handleRefresh} disabled={isRefreshing || isLoading}>
+            <button
+              type="button"
+              data-testid="chart-refresh-button"
+              onClick={handleRefresh}
+              disabled={isRefreshing || isLoading}
+            >
               {isRefreshing ? 'Refreshing...' : 'Refresh Chart'}
             </button>
           </div>

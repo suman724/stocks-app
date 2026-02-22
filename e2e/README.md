@@ -35,12 +35,15 @@ This will:
   - Override the driver binary path.
 - `TAURI_NATIVE_DRIVER_PATH=/custom/path/to/WebKitWebDriver make e2e-smoke`
   - Override the native WebKit driver path (Linux WebKit backend).
+- `E2E_TWELVEDATA_API_KEY=<real-key> make e2e-smoke`
+  - Use a valid provider key to avoid invalid-key warning paths during smoke runs.
 
 ## Notes
 
 - The harness targets `src-tauri/target/debug/tauri-stocks-app(.exe)` by default.
 - Official `tauri-driver` support is limited on macOS. If app startup fails there, run smoke tests on Windows/Linux or switch to a macOS-capable driver setup.
 - CI automation is wired in `.github/workflows/ci.yml` as job `desktop-e2e-smoke-linux`.
+- CI can inject `E2E_TWELVEDATA_API_KEY` from repo/org secret `E2E_TWELVEDATA_API_KEY`.
 
 ## Common Failure: `spawn tauri-driver ENOENT`
 

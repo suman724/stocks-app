@@ -106,6 +106,7 @@ jobs:
             src-tauri/target/release/bundle/**/*.msi
 
   desktop-e2e-smoke-linux:
+    if: ${{ secrets.E2E_TWELVEDATA_API_KEY != '' }}
     needs: [frontend-checks, backend-checks]
     runs-on: ubuntu-latest
     steps:
@@ -169,4 +170,16 @@ jobs:
           echo "Resolved WebKitWebDriver: $WEBKIT_DRIVER"
           echo "TAURI_NATIVE_DRIVER_PATH=$WEBKIT_DRIVER" >> "$GITHUB_ENV"
       - name: Run desktop smoke E2E (Linux)
+        env:
+          E2E_TWELVEDATA_API_KEY: ${{ secrets.E2E_TWELVEDATA_API_KEY }}
         run: xvfb-run -a make e2e-smoke
+
+  desktop-e2e-smoke-linux-skip-notice:
+    if: ${{ secrets.E2E_TWELVEDATA_API_KEY == '' }}
+    needs: [frontend-checks, backend-checks]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain E2E skip
+        run: |
+          echo "Skipping desktop-e2e-smoke-linux."
+          echo "Reason: GitHub secret E2E_TWELVEDATA_API_KEY is not configured."

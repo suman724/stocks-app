@@ -2,6 +2,12 @@
 
 Use this checklist for each internal build on both macOS and Windows.
 
+Before running the manual checklist, run the automated smoke harness when supported on your platform:
+
+```bash
+make e2e-smoke
+```
+
 ## Run Metadata
 
 - Date:

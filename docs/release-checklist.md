@@ -13,9 +13,10 @@ Use this checklist before promoting an internal build.
 
 ## Quality Gates
 
-1. Desktop E2E smoke checklist completed on macOS.
-2. Desktop E2E smoke checklist completed on Windows.
-3. Manual QA checklist completed for:
+1. Automated desktop smoke harness (`make e2e-smoke`) executed and reviewed.
+2. Desktop E2E smoke checklist completed on macOS.
+3. Desktop E2E smoke checklist completed on Windows.
+4. Manual QA checklist completed for:
 - invalid key path
 - offline path
 - rate-limit path

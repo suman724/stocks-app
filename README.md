@@ -50,6 +50,8 @@ A `Makefile` is provided for common development tasks:
 - `make test`: Run all frontend and backend tests
 - `make lint`: Run ESLint and cargo clippy
 - `make format`: Run Prettier and cargo fmt
+- `make e2e-setup`: Install desktop E2E harness dependencies
+- `make e2e-smoke`: Run automated desktop smoke tests (WebDriver + `tauri-driver`)
 
 ## Phase 4 QA and Release Docs
 
@@ -57,6 +59,24 @@ A `Makefile` is provided for common development tasks:
 - `docs/e2e-smoke-results.md`: Execution log for completed smoke runs per platform.
 - `docs/manual-qa-checklist.md`: Robustness checklist for invalid key, offline, rate-limit, and cache fallback paths.
 - `docs/release-checklist.md`: Pre-release gate for artifacts, tests, and rollback/readiness checks.
+- `e2e/`: Automated desktop smoke harness (WebDriver + specs + runner config).
+
+## Automated Desktop E2E
+
+Run this once:
+
+```bash
+make e2e-setup
+cargo install tauri-driver --locked
+```
+
+Run smoke tests:
+
+```bash
+make e2e-smoke
+```
+
+See `e2e/README.md` for overrides (`E2E_SKIP_BUILD`, `E2E_APP_PATH`, `TAURI_DRIVER_PATH`) and platform notes.
 
 ## Project Structure
 

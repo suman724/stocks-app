@@ -12,6 +12,15 @@ dist
 dist-ssr
 *.local
 
+# E2E harness artifacts
+e2e/node_modules/
+e2e/.wdio-*/
+e2e/reports/
+e2e/artifacts/
+e2e/screenshots/
+e2e/videos/
+e2e/logs/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

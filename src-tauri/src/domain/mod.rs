@@ -4,12 +4,13 @@ mod models;
 pub use errors::AppError;
 pub use models::{
     AppProvider, AppSettings, AppSettingsInput, BootstrapPayload, ProviderTestResult, TimeRange,
-    WatchlistItem,
+    QuoteStatus, QuoteSummary, WatchlistItem,
 };
 
 const MIN_API_KEY_LEN: usize = 8;
 const MIN_AUTO_REFRESH_SECONDS: u32 = 15;
 const MAX_AUTO_REFRESH_SECONDS: u32 = 3600;
+const MAX_SYMBOL_LEN: usize = 12;
 
 pub fn validate_settings(input: AppSettingsInput) -> Result<AppSettings, AppError> {
     let api_key = input.api_key.trim().to_string();
@@ -45,6 +46,42 @@ pub fn validate_settings(input: AppSettingsInput) -> Result<AppSettings, AppErro
         auto_refresh_seconds: input.auto_refresh_seconds,
         notifications_enabled: input.notifications_enabled,
     })
+}
+
+pub fn normalize_symbol(input: &str) -> Result<String, AppError> {
+    let normalized = input.trim().to_uppercase();
+    if normalized.is_empty() {
+        return Err(AppError::validation(
+            "invalid_symbol",
+            "Symbol cannot be empty.",
+        ));
+    }
+
+    if normalized.len() > MAX_SYMBOL_LEN {
+        return Err(AppError::validation(
+            "invalid_symbol",
+            "Symbol is too long.",
+        ));
+    }
+
+    if !normalized
+        .chars()
+        .all(|ch| ch.is_ascii_uppercase() || ch.is_ascii_digit() || ch == '.' || ch == '-')
+    {
+        return Err(AppError::validation(
+            "invalid_symbol",
+            "Symbol contains invalid characters.",
+        ));
+    }
+
+    Ok(normalized)
+}
+
+pub fn unix_timestamp_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0)
 }
 
 #[cfg(test)]
@@ -84,5 +121,17 @@ mod tests {
         let result = validate_settings(sample_input("  valid-key-123  ", 60));
         assert!(result.is_ok());
         assert_eq!(result.unwrap().api_key, "valid-key-123");
+    }
+
+    #[test]
+    fn normalize_symbol_trims_and_upcases() {
+        let symbol = normalize_symbol(" aapl ").unwrap();
+        assert_eq!(symbol, "AAPL");
+    }
+
+    #[test]
+    fn normalize_symbol_rejects_invalid_characters() {
+        let result = normalize_symbol("AAPL$");
+        assert!(result.is_err());
     }
 }

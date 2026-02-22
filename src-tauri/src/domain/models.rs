@@ -30,6 +30,28 @@ pub struct WatchlistItem {
     pub pinned: Option<bool>,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum QuoteStatus {
+    Fresh,
+    Stale,
+    Error,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct QuoteSummary {
+    pub symbol: String,
+    pub price: f64,
+    pub change_abs: Option<f64>,
+    pub change_pct: Option<f64>,
+    pub currency: Option<String>,
+    pub last_updated_at: String,
+    pub status: QuoteStatus,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {

@@ -21,7 +21,10 @@ pub fn run() {
             commands::settings::get_settings,
             commands::settings::save_settings,
             commands::settings::test_provider_connection,
-            commands::watchlist::get_watchlist
+            commands::watchlist::get_watchlist,
+            commands::watchlist::add_symbol,
+            commands::watchlist::remove_symbol,
+            commands::market_data::refresh_watchlist_quotes
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

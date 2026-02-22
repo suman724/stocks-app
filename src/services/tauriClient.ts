@@ -3,6 +3,7 @@ import type {
   AppError,
   AppSettings,
   ProviderTestResult,
+  QuoteSummary,
   WatchlistItem,
 } from '../types';
 
@@ -61,5 +62,17 @@ export const tauriClient = {
 
   getWatchlist: async (): Promise<WatchlistItem[]> => {
     return await invokeWithError<WatchlistItem[]>('get_watchlist');
+  },
+
+  addSymbol: async (symbol: string): Promise<WatchlistItem[]> => {
+    return await invokeWithError<WatchlistItem[]>('add_symbol', { symbol });
+  },
+
+  removeSymbol: async (symbol: string): Promise<WatchlistItem[]> => {
+    return await invokeWithError<WatchlistItem[]>('remove_symbol', { symbol });
+  },
+
+  refreshWatchlistQuotes: async (): Promise<QuoteSummary[]> => {
+    return await invokeWithError<QuoteSummary[]>('refresh_watchlist_quotes');
   },
 };

@@ -46,3 +46,14 @@ export interface AppSettings {
   autoRefreshSeconds: number;
   notificationsEnabled: boolean;
 }
+
+export interface ProviderTestResult {
+  ok: boolean;
+  provider: AppProvider;
+  message: string;
+}
+
+export interface AppError {
+  code: string;
+  message: string;
+}

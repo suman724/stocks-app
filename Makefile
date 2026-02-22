@@ -1,4 +1,4 @@
-.PHONY: dev build test lint format clean install setup
+.PHONY: dev build test lint format clean install setup e2e-setup e2e-smoke
 
 NPM_CACHE ?= /tmp/npm-cache-stocks
 
@@ -27,6 +27,14 @@ test-frontend:
 test-backend:
 	cd src-tauri && cargo test
 
+# Install desktop E2E harness dependencies
+e2e-setup:
+	npm --prefix e2e install --cache $(NPM_CACHE)
+
+# Run desktop smoke E2E tests (WebDriver + tauri-driver)
+e2e-smoke:
+	export PATH="$$HOME/.cargo/bin:$$PATH" && npm run e2e:smoke
+
 # Run linters
 lint: lint-frontend lint-backend
 
@@ -49,4 +57,3 @@ format-backend:
 clean:
 	rm -rf node_modules
 	rm -rf src-tauri/target
-
